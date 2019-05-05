@@ -6,7 +6,6 @@ import sys
 def getNav(fund):
     import urllib.request
     url = 'https://www.morningstar.se/Funds/Quicktake/Overview.aspx?perfid=' + fund
-    print('Requesting ' + url)
     response = urllib.request.urlopen(url)
 
     for l in response:
@@ -18,12 +17,14 @@ def getNav(fund):
             nav = s[3]
             nav = ''.join([x for x in nav if x in '0123456789,'])
             date = s[5]
-    print('Done ' + url)
     return (name, nav, date)
 
 with open(sys.argv[1]) as json_file:
     import json
+    import concurrent.futures
     json_data = json.load(json_file)
-    for i in [getNav(x) + (y,) for (x, y) in json_data['navs']]:
-        (fullname, nav, date, myname) = i
-        print(';'.join([myname, nav, date]))
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        (funds, mynames) = zip(*json_data['navs'])
+        for ((_, nav, date), myname) in zip(executor.map(getNav, funds), mynames):
+            print(';'.join([myname, nav, date]))

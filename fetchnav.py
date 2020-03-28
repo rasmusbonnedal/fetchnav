@@ -2,10 +2,12 @@
 # -*- coding: utf-8 -*- 
 
 import sys
+import re
 
 def getNav(fund):
     import urllib.request
-    url = 'https://www.morningstar.se/Funds/Quicktake/Overview.aspx?perfid=' + fund
+#    url = 'https://www.morningstar.se/Funds/Quicktake/Overview.aspx?perfid=' + fund
+    url = 'https://www.morningstar.se/se/funds/snapshot/snapshot.aspx?id=' + fund
     response = urllib.request.urlopen(url)
 
     name = None
@@ -13,21 +15,22 @@ def getNav(fund):
     date = None
     for l in response:
         ul = l.decode('utf-8')
-        if '<h2>' in ul:
-            name = ul.split('>')[1].split('<')[0]
-        elif 'Senaste NAV' in ul:
-            s = [x.split('<')[0].strip() for x in ul.split('>')]
-            nav = ''.join([x for x in s[3] if x in '0123456789,'])
-            date = s[5]
+        if '<script' in ul and '<h1>' in ul:
+            name = re.search('<h1>([^<]+)</h1>', ul).group(1)
+        elif 'Andelskurs (NAV)' in ul:
+            m = re.search('<br />([\d-]+)</span></td><td class="line"> </td><td class="line text">SEK ([\d,]+)</td>', ul)
+            date = m.group(1)
+            nav = m.group(2)
         if nav and date and name:
             return (name, nav, date)
-    raise RuntimeError("Could not get nav")
+    raise RuntimeError("Could not get nav " + str((name, nav, date)))
 
 def getNavRetry(fund):
     for i in range(3):
         try:
             return getNav(fund)
-        except RuntimeError:
+        except RuntimeError as e:
+            print(e)
             sys.stderr.write("Error getting " + fund + ", retrying\n")
     raise RuntimeError("Could not fetch nav, giving up")
 

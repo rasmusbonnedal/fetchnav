@@ -35,14 +35,26 @@ def getNavRetry(fund):
     raise RuntimeError("Could not fetch nav, giving up")
 
 def testOne():
-    print(getNav("0P000148YN"))
+    print(getNav('F0GBR04FT1'))
+
+
+def putOutput(output):
+    s = '\n'.join(output)
+    if sys.platform == 'win32':
+        import winclip
+        winclip.paste(s)
+        print(s)
+    else:
+        print(s)
 
 with open(sys.argv[1]) as json_file:
     import json
     import concurrent.futures
     json_data = json.load(json_file)
 
+    output = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
         (funds, mynames) = zip(*json_data['navs'])
-        for ((_, nav, date), myname) in zip(executor.map(getNavRetry, funds), mynames):
-            print('\t'.join([myname, nav, date]))
+        for ((name, nav, date), myname) in zip(executor.map(getNavRetry, funds), mynames):
+            output.append('\t'.join([name, nav, date]))
+    putOutput(output)
